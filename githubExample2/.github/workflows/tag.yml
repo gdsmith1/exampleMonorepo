@@ -1,0 +1,17 @@
+on:
+    push:
+        tags:
+            - '*'
+
+jobs:
+    get-tag:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Extract current tag name from repo
+              run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+            - name: Print tag name
+              run: echo $TAG_NAME

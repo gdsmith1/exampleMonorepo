@@ -1,0 +1,14 @@
+services:
+  runner:
+    build: ./runner
+    ports:
+      - 8080:8080
+    volumes:
+      - ./runner/data:/home/gha/actions-runner/_work
+
+  nexus:
+    build: ./nexus
+    ports:
+      - 8081:8081
+    volumes:
+      - ./nexus/data:/sonatype-work/nexus3

@@ -1,0 +1,25 @@
+name: 'Hello World'
+description: 'Greet someone'
+inputs:
+  user-input:  # id of input
+    description: 'read input and create an artifact called hello.txt'
+    required: true
+    default: 'Default Hello world!'
+runs:
+  using: "composite"
+  steps:
+    - name: Set User
+      run: |
+          echo "input- $USER_INPUT"
+          echo "$USER_INPUT" > hello.txt
+      shell: bash
+      env:
+        USER_INPUT: ${{ inputs.user-input }}
+
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: hello2
+        path: hello.txt
+

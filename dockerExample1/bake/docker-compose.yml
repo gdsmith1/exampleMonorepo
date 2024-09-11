@@ -1,0 +1,21 @@
+# A standard docker-compose file
+
+services:
+  # github actions runner service
+  runner:
+    # directory where the Dockerfile is located
+    build: ./runner
+    ports:
+    # set the port mapping
+      - 8080:8080
+    # set the image name and tag - needed for the deployment
+    image: gdsmith1/runner:latest
+
+  # nexus oss server service
+  nexus:
+    build: ./nexus
+    ports:
+      - 8081:8081
+    volumes:
+      - ./nexus/data:/sonatype-work/nexus3
+    image: gdsmith1/nexus:latest

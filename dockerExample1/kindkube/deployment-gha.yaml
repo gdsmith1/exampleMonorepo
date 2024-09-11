@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gha-deployment
+  namespace: bootcamp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bootcamp-app
+  template:
+    metadata:
+      labels:
+        app: bootcamp-app
+    spec:
+      containers:
+      - name: gha-runner
+        image: runner:v1.0
+        ports:
+        - containerPort: 8080

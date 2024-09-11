@@ -1,0 +1,47 @@
+#runs-on: self-hosted #GOES IN EACH JOB
+
+
+name: CI
+on:
+  workflow_dispatch:
+  workflow_call:
+jobs:
+
+    newjob:
+        runs-on: self-hosted
+        steps:
+          - name: Use my action
+            uses: gdsmith1/githubExercise2/.github/actions@v9
+            with:
+              user-input: 'Hello world!'
+              
+          - name: Download artifact
+            uses: actions/download-artifact@v4
+            with:
+              name: hello2
+              path: .
+          
+          - name: Read artifact
+            run: cat hello.txt
+
+         
+    matrix:
+      runs-on: self-hosted
+      needs: newjob
+      strategy:
+        matrix:
+          count: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+      steps:
+        - name: Download artifact
+          uses: actions/download-artifact@v4
+          with:
+            name: hello2
+            path: .
+        - name: print
+          shell: bash
+          run: |
+            var=`cat hello.txt`
+            echo "$var - ${{ matrix.count }}"
+
+      
+

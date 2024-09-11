@@ -1,0 +1,8 @@
+name: Caller
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+jobs:
+    caller:
+        uses: gdsmith1/githubExercise2/.github/workflows/main.yaml@v10

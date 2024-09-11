@@ -1,0 +1,15 @@
+# this goes somewhere like the root of the repo.  It describes which project to build and how to release it.
+project_name: mykube
+builds:
+  - main: ./cmd/mykube/main.go
+    goos:
+      - linux
+    goarch:
+      - arm64
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+release:
+  github:
+    owner: gdsmith1
+    name: kubernetes

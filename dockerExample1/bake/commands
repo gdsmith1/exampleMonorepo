@@ -1,0 +1,12 @@
+# start your instance as mybuilder
+docker buildx create --name mybuilder --use # creates a new buildkit instance
+docker buildx inspect --bootstrap # initializes the builder
+
+# with a compose YAML file
+docker buildx bake --file docker-compose.yml --set '*.platform=linux/amd64,linux/arm64' --no-cache --push
+
+# with an HCL file
+docker buildx bake --push
+
+# advanced features
+docker buildx bake --file docker-bake2.hcl --push
