@@ -1,0 +1,16 @@
+{
+  "name": "jesttest",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "simple.js",
+  "scripts": {
+    "test": "jest",
+    "coverage": "jest --coverage"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

@@ -1,0 +1,28 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - nginx
+  - nodejs
+  - npm
+write_files:
+  - owner: www-data:www-data
+    path: /etc/nginx/sites-available/default
+    content: |
+      server {
+        listen 80;
+        location / {
+          proxy_pass http://localhost:3000;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade \$http_upgrade;
+          proxy_set_header Connection keep-alive;
+          proxy_set_header Host \$host;
+          proxy_cache_bypass \$http_upgrade;
+        }
+      }
+runcmd:
+  - mkdir "/mnt/webapp"
+  - 'mount -t cifs //fishesbasicwebsite.file.core.windows.net/fs-fishes-bootcamp /mnt/webapp -o vers=3.0,username=fishesbasicwebsite,password=SECRET,dir_mode=0755,file_mode=0664'
+  - service nginx restart
+  - cd "/mnt/webapp"
+  - nodejs server.js

@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aks-bootcamp
+  namespace: fish
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aks-bootcamp
+  template:
+    metadata:
+      labels:
+        app: aks-bootcamp
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+      - name: aks-bootcamp
+        image: acrfishesbootcamp.azurecr.io/fishimage:latest
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aks-bootcamp
+  namespace: fish
+spec:
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  selector:
+    app: aks-bootcamp

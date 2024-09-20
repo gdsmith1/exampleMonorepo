@@ -1,0 +1,45 @@
+#!/bin/bash
+yum update -y && yum upgrade -y
+yum install -y java git
+git clone https://github.com/liatrio/spring-petclinic.git
+cd spring-petclinic
+export HOME=$(pwd)
+./mvnw package
+java -jar target/*.jar
+
+
+
+aws ec2 create-launch-template \
+    --launch-template-name gibson-launch-template \
+    --version-description "Version 1" \
+    --launch-template-data '{
+      "ImageId": "ami-01c57ce5a70b0280f",
+      "InstanceType": "t2.micro",
+      "UserData": "amF2YSAtamFyIHRhcmdldC8qLmphcg==",
+      "KeyName": "gibson-key",
+      "SecurityGroupIds": [
+        "sg-0959a79345cf4dbbf"
+      ],
+      "TagSpecifications": [
+        {
+          "ResourceType": "instance",
+          "Tags": [
+            {
+              "Key": "Name",
+              "Value": "gibson-packer-template"
+            }
+          ]
+        }
+      ]
+    }' --profile gibson
+
+
+aws autoscaling create-auto-scaling-group \
+    --auto-scaling-group-name gibson-petclinic-group \
+    --launch-template LaunchTemplateName=gibson-launch-template,Version=1 \
+    --min-size 2 \
+    --max-size 2 \
+    --desired-capacity 2 \
+    --vpc-zone-identifier "subnet-0391ff85858065967,subnet-0089077f23e5dd43d" \
+    --tags "Key=Name,Value=gibson-petclinic-instances" \
+    --profile gibson
