@@ -1,0 +1,108 @@
+# demo_setup.yml
+- hosts: localhost
+  gather_facts: False
+
+  tasks:
+
+    - name: Provision an EC2 instance with a public IP address
+      amazon.aws.ec2_instance:
+        name: Demo-Gibson
+        key_name: "gibson-key"
+        vpc_subnet_id: subnet-0391ff85858065967
+        instance_type: t2.micro
+        security_group: jarrett-DOB-ECS
+        network_interfaces:
+          - assign_public_ip: true
+        image_id: ami-0866a3c8686eaeeba # Ubuntu 24.04 64-bit x86
+        tags:
+          Environment: Testing
+      register: result
+
+    - name: Wait for the instance to be in a running state
+      amazon.aws.ec2_instance_info:
+        instance_ids: "{{ result.instance_ids }}"
+      register: ec2_info
+      until: ec2_info.instances[0].state.name == 'running'
+      retries: 10
+      delay: 30
+
+    - name: Wait for SSH to be available
+      wait_for:
+        host: "{{ ec2_info.instances[0].public_ip_address }}"
+        port: 22
+        delay: 10
+        timeout: 300
+        state: started
+
+    - name: Add all instance public IPs to host group
+      add_host: hostname={{ item.public_ip_address }} groups=ec2hosts
+      loop: "{{ result.instances }}"
+
+- hosts: ec2hosts
+  name: Setup GH Runner # assumes actions-runner directory is in the same directory as the playbook
+  gather_facts: true
+  vars:
+    ansible_ssh_private_key_file: gibson-key.pem
+    ansible_user: ubuntu
+
+  tasks:
+
+     - name: Update and upgrade apt packages
+       apt:
+        update_cache: yes
+        upgrade: dist
+       become: true
+
+     - name: Install dependencies
+       apt:
+         name:
+          - curl
+          - git
+          - jq
+          - wget
+         state: present
+         autoclean: yes
+       become: true
+
+     - name: Set working directory
+       file:
+        path: /home/ubuntu
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+
+     - name: Download GitHub Actions runner
+       get_url:
+        url: https://github.com/actions/runner/releases/download/v2.319.1/actions-runner-linux-x64-2.319.1.tar.gz
+        dest: /home/ubuntu/actions-runner-linux-x64-2.319.1.tar.gz
+       become: true
+       become_user: ubuntu
+
+     - name: Verify GitHub Actions runner checksum
+       shell: echo "3f6efb7488a183e291fc2c62876e14c9ee732864173734facc85a1bfb1744464  actions-runner-linux-x64-2.319.1.tar.gz" | shasum -a 256 -c
+       args:
+        chdir: /home/ubuntu
+       become: true
+       become_user: ubuntu
+
+     - name: Extract GitHub Actions runner
+       ansible.builtin.unarchive:
+        src: /home/ubuntu/actions-runner-linux-x64-2.319.1.tar.gz
+        dest: /home/ubuntu
+        remote_src: yes
+       become: true
+       become_user: ubuntu
+
+     - name: Configure GitHub Actions runner
+       command: ./config.sh --url https://github.com/gdsmith1/exampleMonorepo --token A5M6TE3M42DVSU27OK5ELTLG7STNA --unattended
+       args:
+        chdir: /home/ubuntu
+       become: true
+       become_user: ubuntu
+
+     - name: Start the runner in the background
+       shell: nohup ./run.sh &> /dev/null &
+       args:
+        chdir: /home/ubuntu
+       become: true
+       become_user: ubuntu
