@@ -1,0 +1,118 @@
+# playbook.yml
+
+- hosts: all
+  name: Wait for SSH to the server to be available
+  gather_facts: False
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Wait for SSH to be available
+      wait_for_connection:
+        delay: 10
+        timeout: 300
+        connect_timeout: 10
+        sleep: 5
+
+- hosts: all
+  name: Setup GH Runner # skips most steps if runner service already exists
+  gather_facts: true
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+      become: true
+
+    - name: Install dependencies
+      apt:
+        name:
+          - curl
+          - git
+          - jq
+          - wget
+        state: present
+        autoclean: yes
+      become: true
+
+    - name: Set working directory
+      file:
+        path: /home/ubuntu
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Check if GitHub Actions runner service exists
+      stat:
+        path: /etc/systemd/system/github-runner.service
+      register: runner_service
+
+    - name: End play if GitHub Actions runner service exists
+      meta: end_play
+      when: runner_service.stat.exists
+
+    - name: Download GitHub Actions runner
+      get_url:
+        url: "{{ github_runner_url }}"
+        dest: /home/ubuntu/actions-runner-linux-x64.tar.gz
+      become: true
+      become_user: ubuntu
+
+    - name: Verify GitHub Actions runner checksum
+      shell: echo "{{ github_runner_checksum }}  actions-runner-linux-x64.tar.gz" | shasum -a 256 -c
+      args:
+        chdir: /home/ubuntu
+      become: true
+      become_user: ubuntu
+
+    - name: Extract GitHub Actions runner
+      ansible.builtin.unarchive:
+        src: /home/ubuntu/actions-runner-linux-x64.tar.gz
+        dest: /home/ubuntu
+        remote_src: yes
+      become: true
+      become_user: ubuntu
+
+    - name: Configure GitHub Actions runner
+      shell: ./config.sh --url {{ github_repo_url }} --token {{ github_token }} --unattended --name {{ github_runner_name }} --replace
+      args:
+        chdir: /home/ubuntu
+      become: true
+      become_user: ubuntu
+
+    - name: Create systemd service file for GitHub Actions runner
+      copy:
+        content: |
+          [Unit]
+          Description=GitHub Actions Runner
+          After=network.target
+
+          [Service]
+          ExecStart=/home/ubuntu/run.sh
+          User=ubuntu
+          WorkingDirectory=/home/ubuntu
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/github-runner.service
+        mode: '0644'
+      become: true
+
+- hosts: all
+  name: Start the GH Runner service # reloads systemd daemon and starts the service
+  gather_facts: true
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Reload systemd daemon
+      command: systemctl daemon-reload
+      become: true
+
+    - name: Enable and start GitHub Actions runner service
+      ansible.builtin.systemd:
+        name: github-runner
+        enabled: yes
+        state: started
+      become: true

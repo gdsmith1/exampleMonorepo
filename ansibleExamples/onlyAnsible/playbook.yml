@@ -44,6 +44,7 @@
   vars:
     ansible_ssh_private_key_file: gibson-key.pem
     ansible_user: ubuntu
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
 
   tasks:
 
@@ -71,12 +72,24 @@
         owner: ubuntu
         group: ubuntu
 
+     - name: Check if GitHub Actions runner service exists
+       stat:
+        path: /etc/systemd/system/github-runner.service
+       register: runner_service
+     
+     - name: End play if GitHub Actions runner service exists
+       meta: end_play
+       when: runner_service.stat.exists
+
      - name: Download GitHub Actions runner
        get_url:
         url: https://github.com/actions/runner/releases/download/v2.319.1/actions-runner-linux-x64-2.319.1.tar.gz
         dest: /home/ubuntu/actions-runner-linux-x64-2.319.1.tar.gz
        become: true
        become_user: ubuntu
+
+     
+     
 
      - name: Verify GitHub Actions runner checksum
        shell: echo "3f6efb7488a183e291fc2c62876e14c9ee732864173734facc85a1bfb1744464  actions-runner-linux-x64-2.319.1.tar.gz" | shasum -a 256 -c
@@ -94,15 +107,41 @@
        become_user: ubuntu
 
      - name: Configure GitHub Actions runner
-       command: ./config.sh --url https://github.com/gdsmith1/exampleMonorepo --token A5M6TE3M42DVSU27OK5ELTLG7STNA --unattended
+       shell: ./config.sh --url https://github.com/gdsmith1/exampleMonorepo --token A5M6TEYMEEHTMIYGBJUWYSDG7XXAU --unattended --name Demo-Gibson --replace
        args:
         chdir: /home/ubuntu
        become: true
        become_user: ubuntu
 
-     - name: Start the runner in the background
-       shell: nohup ./run.sh &> /dev/null &
-       args:
-        chdir: /home/ubuntu
+     - name: Create systemd service file for GitHub Actions runner
+       copy:
+        content: |
+          [Unit]
+          Description=GitHub Actions Runner
+          After=network.target
+
+          [Service]
+          ExecStart=/home/ubuntu/run.sh
+          User=ubuntu
+          WorkingDirectory=/home/ubuntu
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/github-runner.service
+        mode: '0644'
        become: true
-       become_user: ubuntu
+
+     - name: Reload systemd daemon
+       command: systemctl daemon-reload
+       become: true
+
+     - name: Enable and start GitHub Actions runner service
+       ansible.builtin.systemd:
+        name: github-runner
+        enabled: yes
+        state: started
+       become: true
+
+      # To Do before Demo:
+      # Add variables for stuff like the repo URL, token, aws resources, etc.

@@ -1,0 +1,8 @@
+# vars.yml
+
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+github_runner_url: https://github.com/actions/runner/releases/download/v2.319.1/actions-runner-linux-x64-2.319.1.tar.gz
+github_runner_checksum: 3f6efb7488a183e291fc2c62876e14c9ee732864173734facc85a1bfb1744464
+github_repo_url: https://github.com/gdsmith1/exampleMonorepo
+github_token: A5M6TE3PYFFNQIN3I3V2O7THABTOW
+github_runner_name: Demo-Gibson-TF
