@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 80
+        startupProbe:
+          exec:
+            command:
+            - cat
+            - /etc/nginx/nginx.conf
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 2
+        readinessProbe:
+          initialDelaySeconds: 1
+          periodSeconds: 2
+          successThreshold: 2
+          httpGet:
+            path: /
+            port: 80
+        livenessProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          httpGet:
+            path: /index.html
+            port: 80
+        volumeMounts:
+        - mountPath: /var/www/html/index.html
+          name: my-storage
+      volumes:
+        - name: my-storage
+          persistentVolumeClaim:
+            claimName: my-first-pvc
