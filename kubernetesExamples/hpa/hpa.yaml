@@ -1,0 +1,56 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  creationTimestamp: "2024-10-23T16:45:18Z"
+  name: php-apache
+  namespace: default
+  resourceVersion: "10220"
+  uid: b00d13a6-d2a0-4d56-b3c2-f6fa50bae901
+spec:
+  maxReplicas: 5
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 65
+        type: Utilization
+    type: Resource
+  - resource:
+      name: memory
+      target:
+        averageUtilization: 12
+        type: Utilization
+    type: Resource
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: php-apache
+status:
+  conditions:
+  - lastTransitionTime: "2024-10-23T19:06:29Z"
+    message: recommended size matches current size
+    reason: ReadyForNewScale
+    status: "True"
+    type: AbleToScale
+  - lastTransitionTime: "2024-10-23T16:46:18Z"
+    message: the HPA was able to successfully calculate a replica count from cpu resource
+      utilization (percentage of request)
+    reason: ValidMetricFound
+    status: "True"
+    type: ScalingActive
+  - lastTransitionTime: "2024-10-23T20:40:47Z"
+    message: the desired replica count is less than the minimum replica count
+    reason: TooFewReplicas
+    status: "True"
+    type: ScalingLimited
+  currentMetrics:
+  - resource:
+      current:
+        averageUtilization: 0
+        averageValue: 1m
+      name: cpu
+    type: Resource
+  currentReplicas: 1
+  desiredReplicas: 1
+  lastScaleTime: "2024-10-23T20:40:47Z"

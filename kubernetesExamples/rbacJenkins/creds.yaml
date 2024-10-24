@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Secret
+metadata:
+# this is the jenkins id
+  name: liatrio-jenkins-secret
+  namespace: jenkins
+  labels:
+# secret type
+    "jenkins.io/credentials-type": "usernamePassword"
+  annotations:
+# description - can not be a label as spaces are not allowed
+    "jenkins.io/credentials-description" : "credentials from Kubernetes"
+type: Opaque
+stringData:
+  username: 'gibson'
+  password: 'password'
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-read-secrets
+  namespace: jenkins
+  annotations:
+    meta.helm.sh/release-name: jenkins
+    meta.helm.sh/release-namespace: jenkins
+  labels:
+    app.kubernetes.io/component: jenkins-controller
+    app.kubernetes.io/instance: jenkins
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: jenkins
+    helm.sh/chart: jenkins-3.10.3
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "watch", "list"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-read-secrets
+  namespace: jenkins
+  annotations:
+    meta.helm.sh/release-name: jenkins
+    meta.helm.sh/release-namespace: jenkins
+  labels:
+    app.kubernetes.io/component: jenkins-controller
+    app.kubernetes.io/instance: jenkins
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: jenkins
+    helm.sh/chart: jenkins-3.10.3
+subjects:
+  - kind: ServiceAccount
+    name: jenkins
+    namespace: jenkins
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jenkins-read-secrets
