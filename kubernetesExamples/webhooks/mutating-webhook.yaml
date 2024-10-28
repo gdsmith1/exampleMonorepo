@@ -9,9 +9,22 @@ webhooks:
     sideEffects: None
     admissionReviewVersions: ["v1","v1beta1"]
     # Add rule HERE
+    rules: # rule to apply to incoming requests
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["apps", ""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+        scope: Namespaced
     clientConfig:
       service:
-        name: warden
+        name: warden # sends them to the service named warden
         namespace: validation
         path: /mutate/
-      caBundle: PLACEHOLDER
+      caBundle: <>
+
+# to add caBundle: 
+#   CA=`kubectl -n validation get secret validation-ca-tls -o jsonpath='{.data.ca\.crt}'`
+#   cat mutating-webhook.yaml | sed "s/      caBundle: .*/      caBundle: ${CA}/" | kubectl apply -f -
+
+
+

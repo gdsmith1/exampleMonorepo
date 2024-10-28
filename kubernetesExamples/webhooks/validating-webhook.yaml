@@ -20,7 +20,7 @@ webhooks:
         name: warden # sends them to the service named warden
         namespace: validation
         path: /validate/
-      caBundle: 
+      caBundle: <>
 
 # to add caBundle: 
 #   CA=`kubectl -n validation get secret validation-ca-tls -o jsonpath='{.data.ca\.crt}'`
