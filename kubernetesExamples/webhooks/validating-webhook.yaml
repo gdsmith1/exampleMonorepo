@@ -1,0 +1,30 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: warden-validating-webhook
+  namespace: validation
+webhooks:
+  - name: warden.validation.svc
+    failurePolicy: Fail
+    sideEffects: None
+    admissionReviewVersions: ["v1","v1beta1"]
+    # Add rule HERE
+    rules: # rule to apply to incoming requests
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["apps", ""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+        scope: Namespaced
+    clientConfig:
+      service:
+        name: warden # sends them to the service named warden
+        namespace: validation
+        path: /validate/
+      caBundle: 
+
+# to add caBundle: 
+#   CA=`kubectl -n validation get secret validation-ca-tls -o jsonpath='{.data.ca\.crt}'`
+#   cat validating-webhook.yaml | sed "s/      caBundle: .*/      caBundle: ${CA}/" | kubectl apply -f -
+
+
+
