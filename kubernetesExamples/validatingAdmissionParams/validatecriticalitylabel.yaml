@@ -1,0 +1,24 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "criticality-policy.example.com"
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["apps"]
+      apiVersions: ["v1"]
+      operations:  ["CREATE", "UPDATE"]
+      resources:   ["deployments"]
+  validations:
+    - expression: "'labels' in object.metadata && 'criticality' in object.metadata.labels"
+      message: "Deployments need a label of 'criticality' starting on 1/1/2027 with the values 'HIGH', 'MEDIUM', or 'LOW'"
+---
+
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "criticality-binding-test.example.com"
+spec:
+  policyName: "criticality-policy.example.com"
+  validationActions: [Warn]

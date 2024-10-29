@@ -1,0 +1,26 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "demo-policy.example.com"
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   [""]
+      apiVersions: ["v1"]
+      operations:  ["CREATE", "UPDATE"]
+      resources:   ["pods"]
+  validations:
+    - expression: "object.metadata.namespace == 'myapp' ? object.spec.containers.all(container, container.image == 'myapp:latest') : true"
+      message: "All containers must use the image 'myapp:latest' if in the 'myapp' namespace."
+
+---
+
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: demo-policy-binding
+spec:
+  policyName: demo-policy.example.com
+  validationActions:
+    - Deny
