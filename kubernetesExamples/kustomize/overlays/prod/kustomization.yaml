@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Add a namespace specific to the prod environment
+namespace: prod
+
+# Reference the base directory
+resources:
+- ../../base
+
+# Add a prefix to the names of all resources
+namePrefix: prod-
+
+patches: # Add a patch to the nginx deployment
+  - target:
+      kind: Deployment
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: nginx
+      spec:
+        replicas: 3

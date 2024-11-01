@@ -1,0 +1,10 @@
+# json patch to add resource limits and requests
+- op: add
+  path: /spec/template/spec/containers/0/resources
+  value:
+    limits:
+      cpu: "1"
+      memory: 1Gi
+    requests:
+      cpu: "0.5"
+      memory: 500Mi

@@ -1,0 +1,104 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+##### Resource Management #####
+resources: # list of resource files to apply
+- namespace.yaml
+- deployment.yaml
+- service.yaml
+
+##### Common Labels, Images, and Namespaces #####
+images: # replace the image tag with the newTag
+- name: nginx
+  newTag: latest
+
+labels: # add a label to all resources
+- includeSelectors: true
+  pairs:
+    liatr: io
+
+namespace: nginx
+
+##### Patches #####
+patches:
+- patch: |- # strategic merge patch to change an environment variable
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: nginx
+    spec:
+      template:
+        spec:
+          containers:
+            - name: nginx
+              env:
+                - name: apprentice
+                  value: Gibson
+  target:
+    kind: Deployment
+    name: nginx
+- patch: |- # json6902 patch to add resource requests and limits
+    - op: add
+      path: /spec/template/spec/containers/0/resources
+      value:
+        limits:
+          cpu: "1"
+          memory: 1Gi
+        requests:
+          cpu: "0.5"
+          memory: 500Mi
+  target:
+    kind: Deployment
+    name: nginx
+
+##### ConfigMap and Secret Generators #####
+- patch: |- # json patch to add an environment variable from a secret
+    - op: add
+      path: /spec/template/spec/containers/0/env/0
+      value:
+        name: MY_SECRET
+        valueFrom:
+          secretKeyRef:
+            name: mysecret
+            key: SECRET
+  target:
+    kind: Deployment
+    name: nginx
+- patch: |- # json patch to add a volume and volume mount for a config map
+    - op: add
+      path: /spec/template/spec/volumes
+      value: []
+    - op: add
+      path: /spec/template/spec/volumes/0
+      value:
+        name: index-html
+        configMap:
+          name: nginx-index
+          items:
+            - key: index.html
+              path: index.html
+    - op: add
+      path: /spec/template/spec/containers/0/volumeMounts
+      value: []
+    - op: add
+      path: /spec/template/spec/containers/0/volumeMounts/0
+      value:
+        name: index-html
+        mountPath: /usr/share/nginx/html/index.html
+        subPath: index.html
+  target:
+    kind: Deployment
+    name: nginx
+
+generatorOptions: # disable the name suffix hash
+  disableNameSuffixHash: true
+
+secretGenerator: # generate a secret from an env file
+- name: mysecret
+  envs:
+  - .env
+
+configMapGenerator: # generate a config map from a file
+- name: nginx-index
+  files:
+  - index.html
