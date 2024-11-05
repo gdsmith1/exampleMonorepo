@@ -1,0 +1,17 @@
+
+
+repositories:
+  - name: gitea
+    url: https://dl.gitea.io/charts/
+
+releases:
+  - name: gitea
+    namespace: gitea
+    chart: gitea/gitea
+    version: 10.4.1
+    values:
+      - values-gitea.yaml 
+
+apiVersions:
+- policy/v1
+kubeVersion: v1.31.2 # current version of kubernetes
