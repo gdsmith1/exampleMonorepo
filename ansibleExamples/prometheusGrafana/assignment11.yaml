@@ -1,0 +1,251 @@
+# To run: ansible-playbook -i inventory.ini --private-key ~/csci345key --ask-become-pass ./assignment11.yml
+# Firewall will have to allow ports 9100 and 9090
+---
+
+- name: Update and install packages
+  hosts: exporters
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install required packages
+      apt:
+        name:
+          - openssh-server
+          - vim
+          - curl
+          - git
+          - fortune
+          - man
+        state: present
+
+- name: Setup grader user
+  hosts: exporters
+  become: yes
+  tasks:
+    - name: Create grader user
+      user:
+        name: grader
+        state: present
+        password: "{{ 'grader' | password_hash('sha512') }}"
+        shell: /bin/bash
+
+    - name: Grader user password
+      user:
+        name: grader
+        password: "{{ 'grader' | password_hash('sha512') }}"
+
+    - name: Grader user the SSH directory
+      file:
+        path: /home/grader/.ssh
+        state: directory
+        owner: grader
+        group: grader
+        mode: '0700'
+
+    - name: Grader SSH public key
+      copy:
+        content: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAEAQCyy9AM+D+EjIaXoE3XTMyBgFjiwEZBkbRmwHf0oetUXyl6sbOY3qihiN6eQLQCN4/y/AB1cjs+rcIgbhsLsfBlJheqRuv6flaS24ycI9vNA72oKKIw2F/CPgIbr0FkfsjIziSix4e8bC6BAHQxo5PfCNLlGQHQumBFB749QByv25wLRqh7dyY4cuMwszmTzhEzWSSIdqOqDYwOVGuIWWd+f5crpem38fZnP3FR2GGMcnOwjlPnxHj/3JH3Gt9eEY6eLITrlGG6/jxEz3awjulZhJbIs6h9U++b4f772LPRG4hZz3ygBnMo0rqSYJB1hGiFqxLvI6HMrcg9eyOKa8yGxp+s2vToQHRLdN/ORV6lBM+L1C8NkyMsS2zd64kU93CAPV5up45j3S9o4IeHeck1SeU6htTEPzFxlSN1L/R89TivhvTIZRuNclBuJsk9r/FPClqOI7sxjMworXYtSv/UYkHqiGzt646evIBZHJZ4bXgkkO7bmg4kL/+TuKmRgdWfRkO/WsjY4YuHlfC8YMCqhEgb1q4ksv/+PDkiVm4kp6Zu96bB6ZENnMOTFuHx/TYLSXmedQF1Q54mFCX+7+zYiwQuJazdRly/yy5yf9lBS5C7AmRckqcM8zQ7xjWrG7UsU0Pgu2PyrV5T5XDlczjAZgqIrraWtqiSl+2t/8eqSPO395OMK0gakGYPFfvBd/8E+Jqwq/8glU8WHSzAmlpnAy41jHasYj/JjWVrfKaTB1s2TVnIbTHFC91xDHl5L3WNIHzgizVB5nbga8rjJAw+F804ZAIy8hOimYZjIHJcmdHjco+W/NGMHvvnKNdWvyOMCocq6sxW5Tbsje+BfPALDo58pUkyU26xEz9gm9imgTFEtviA2cbTtWSTeSFT6j5QSM3Z7AQvdruvExJusR+jLpwwVT3INxUOFEKhzYiRr1sVliKRB0vHWkksoX42DULYrndvUVDYKLD3FtzzF7K3V/rB2dWXyeTyKJY1OPgeqZXz2Kke9ILR0EOpoNXyXaTeW+U0k/ofjfcRQ8Oio9cREIt9+pmQARcI1uDuointhLDnCeBotSwIC3NifoHmVQWCXBZqhrsWa3V0z+TOgZr/eH6RimsILVVl4gkiaJ1+daw+gfPIlNO5IORsR3C8ECaLSEWuS+GeGYjDXNOK5Jcj5EQoADpWYaIUJcBmyreAajnlhbeImryLiMMd5DrlQxJPJWi02ZSbPYS/Z2k3gZLQndhDXtXX1qsWLPh1RdtvO4x5nveP3X9+gjnHt98aYHR98tFmXLUBPzGLX1MInUL2ARzCQTTS/PXKTeemjYe81rT3mrwVU4MM9o9GyGOe9IuRkL5hL0+kv9MT/MmWhN7D bcdixon@inginious"
+        dest: /home/grader/.ssh/authorized_keys
+        owner: grader
+        group: grader
+        mode: '0600'
+
+- name: Insult users who misspell their Ubuntu root passwords
+  hosts: exporters
+  become: yes
+  tasks:
+    - name: Install sudo if not present
+      apt:
+        name: sudo
+        state: present
+
+    - name: Enable insults in sudoers
+      lineinfile:
+        path: /etc/sudoers
+        state: present
+        regexp: '^Defaults\s+insults'
+        line: 'Defaults insults'
+        validate: 'visudo -cf %s'
+
+- name: Setup Node Exporter
+  hosts: exporters
+  become: yes
+  tasks:
+    - name: Download Node Exporter
+      get_url:
+        url: https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-amd64.tar.gz
+        dest: /tmp/node_exporter-1.8.2.linux-amd64.tar.gz
+
+    - name: Extract Node Exporter
+      ansible.builtin.unarchive:
+        src: /tmp/node_exporter-1.8.2.linux-amd64.tar.gz
+        dest: /opt/
+        remote_src: yes
+
+    - name: Make node_exporter executable
+      file:
+        path: /opt/node_exporter-1.8.2.linux-amd64/node_exporter
+        mode: '0755'
+
+    - name: Create systemd service file for Node Exporter
+      copy:
+        dest: /etc/systemd/system/node_exporter.service
+        content: |
+          [Unit]
+          Description=Node Exporter
+          After=network.target
+
+          [Service]
+          User=nobody
+          ExecStart=/opt/node_exporter-1.8.2.linux-amd64/node_exporter
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd to apply changes
+      command: systemctl daemon-reload
+
+    - name: Enable Node Exporter service
+      systemd:
+        name: node_exporter
+        enabled: yes
+        state: started
+
+- name: Setup Prometheus
+  hosts: prometheusgrafana
+  become: yes
+  tasks:
+    - name: Download Prometheus
+      get_url:
+        url: https://github.com/prometheus/prometheus/releases/download/v2.55.1/prometheus-2.55.1.linux-amd64.tar.gz
+        dest: /tmp/prometheus-2.55.1.linux-amd64.tar.gz
+
+    - name: Extract Prometheus
+      unarchive:
+        src: /tmp/prometheus-2.55.1.linux-amd64.tar.gz
+        dest: /opt/
+        remote_src: yes
+
+    - name: Create Prometheus configuration file
+      template:
+        src: prometheus.yml.j2
+        dest: /opt/prometheus-2.55.1.linux-amd64/prometheus.yml
+
+    - name: Create Prometheus user because prometheus will not run as "nobody"
+      user:
+        name: prometheus
+        system: yes
+        shell: /bin/false
+
+    - name: Create Prometheus directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+      with_items:
+        - /var/lib/prometheus
+        - /var/log/prometheus
+
+    - name: Create Prometheus service file
+      copy:
+        dest: /etc/systemd/system/prometheus.service
+        content: |
+          [Unit]
+          Description=Prometheus
+          After=network.target
+
+          [Service]
+          User=prometheus
+          ExecStart=/opt/prometheus-2.55.1.linux-amd64/prometheus \
+            --config.file=/opt/prometheus-2.55.1.linux-amd64/prometheus.yml \
+            --storage.tsdb.path=/var/lib/prometheus
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd to apply changes
+      command: systemctl daemon-reload
+
+    - name: Enable and start Prometheus service
+      systemd:
+        name: prometheus
+        enabled: yes
+        state: started
+
+- name: Setup Grafana
+  hosts: prometheusgrafana
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - apt-transport-https
+          - software-properties-common
+          - wget
+        state: present
+
+    - name: Create keyrings directory
+      file:
+        path: /etc/apt/keyrings/
+        state: directory
+        mode: '0755'
+
+    - name: Download Grafana GPG key
+      get_url:
+        url: https://apt.grafana.com/gpg.key
+        dest: /etc/apt/keyrings/grafana.gpg
+        mode: '0644'
+
+    - name: Add Grafana APT repository
+      apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main"
+        state: present
+
+    - name: Update APT cache
+      apt:
+        update_cache: yes
+
+    - name: Install Grafana
+      apt:
+        name: grafana
+        state: present
+
+    - name: Update Grafana configuration to use port 80
+      lineinfile:
+        path: /etc/grafana/grafana.ini
+        regexp: '^;http_port ='
+        line: 'http_port = 80'
+
+    - name: Create Grafana service file
+      copy:
+        dest: /etc/systemd/system/grafana-server.service
+        content: |
+          [Unit]
+          Description=Grafana
+          After=network.target
+
+          [Service]
+          User=grafana
+          ExecStart=/usr/sbin/grafana-server --config=/etc/grafana/grafana.ini --homepath=/usr/share/grafana --packaging=deb cfg:default.paths.logs=/var/log/grafana cfg:default.paths.data=/var/lib/grafana cfg:default.paths.plugins=/var/lib/grafana/plugins cfg:default.paths.provisioning=/etc/grafana/provisioning
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd to apply changes
+      command: systemctl daemon-reload
+
+    - name: Enable and start Grafana service # This is commented out because there is an error with the Grafana service I wasn't able to fix.  It had something to do with how the service was being started, because the program was able to be started manually.
+      systemd:
+        name: grafana-server
+        enabled: yes
+        state: started
